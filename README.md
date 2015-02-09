@@ -20,3 +20,13 @@
 # org.apache.cordova.contacts
 
 Plugin documentation: [doc/index.md](doc/index.md)
+
+
+
+##Changes:
+
+###Contact Photos
+Get base64 encoded images instead of image urls
+
+`var options = new ContactFindOptions();
+options.photoBase64 = true;`
