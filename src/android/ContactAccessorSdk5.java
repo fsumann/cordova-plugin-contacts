@@ -45,9 +45,12 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.OperationApplicationException;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.provider.ContactsContract;
+import android.util.Base64;
 import android.util.Log;
 
 /**
@@ -75,6 +78,9 @@ public class ContactAccessorSdk5 extends ContactAccessor {
      * Keep the photo size under the 1 MB blog limit.
      */
     private static final long MAX_PHOTO_SIZE = 1048576;
+    
+    private boolean photoBase64 = false;
+    
 
     private static final String EMAIL_REGEXP = ".+@.+\\.+.+"; /* <anything>@<anything>.<anything>*/
 
@@ -154,9 +160,17 @@ public class ContactAccessorSdk5 extends ContactAccessor {
                 if (!multiple) {
                     limit = 1;
                 }
+                
+                
+                //photo base64
+                if(options.has("photoBase64")){
+                	photoBase64 = options.getBoolean("photoBase64");
+                }
+                
             } catch (JSONException e) {
                 // Multiple was not specified so we assume the default is true.
             }
+            
         }
         else {
             searchTerm = "%";
@@ -436,7 +450,7 @@ public class ContactAccessorSdk5 extends ContactAccessor {
                     }
                     else if (mimetype.equals(ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE)
                             && isRequired("photos", populate)) {
-                        JSONObject photo = photoQuery(c, contactId);
+                        JSONObject photo = photoQuery(c, contactId, photoBase64);
                         if (photo != null) {
                             photos.put(photo);
                         }
@@ -890,22 +904,20 @@ public class ContactAccessorSdk5 extends ContactAccessor {
         }
         return website;
     }
-
+    
     /**
      * Create a ContactField JSONObject
+     * @param cursor
      * @param contactId
-     * @return a JSONObject representing a ContactField
+     * @param base64
+     * @return
      */
-    private JSONObject photoQuery(Cursor cursor, String contactId) {
+    private JSONObject photoQuery(Cursor cursor, String contactId, boolean base64) {
         JSONObject photo = new JSONObject();
         try {
-            photo.put("id", cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo._ID)));
-            photo.put("pref", false);
-            photo.put("type", "url");
             Uri person = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, (Long.valueOf(contactId)));
             Uri photoUri = Uri.withAppendedPath(person, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY);
-            photo.put("value", photoUri.toString());
-
+            
             // Query photo existance
             Cursor photoCursor = mApp.getActivity().getContentResolver().query(photoUri, new String[] {ContactsContract.Contacts.Photo.PHOTO}, null, null, null);
             if (photoCursor == null) {
@@ -916,6 +928,20 @@ public class ContactAccessorSdk5 extends ContactAccessor {
                     return null;
                 }
             }
+            
+            
+            photo.put("id", cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo._ID)));
+            photo.put("pref", false);
+            
+            if(base64){
+            	byte[] buffer = getPhotoBytes(photoUri.toString());
+                photo.put("type", "base64");
+                photo.put("value", Base64.encodeToString(buffer, Base64.DEFAULT));
+            } else {
+            	photo.put("type", "url");
+            	photo.put("value", photoUri.toString());
+            }
+            
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage(), e);
         }
