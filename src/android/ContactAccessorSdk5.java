@@ -45,8 +45,6 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.OperationApplicationException;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.RemoteException;
 import android.provider.ContactsContract;
@@ -910,7 +908,7 @@ public class ContactAccessorSdk5 extends ContactAccessor {
      * @param cursor
      * @param contactId
      * @param base64
-     * @return
+     * @return a JSONObject representing a ContactField
      */
     private JSONObject photoQuery(Cursor cursor, String contactId, boolean base64) {
         JSONObject photo = new JSONObject();
@@ -1002,13 +1000,14 @@ public class ContactAccessorSdk5 extends ContactAccessor {
             return modifyContact(id, contact, accountType, accountName);
         }
     }
-
+    
     /**
      * Creates a new contact and stores it in the database
-     *
      * @param id the raw contact id which is required for linking items to the contact
      * @param contact the contact to be saved
-     * @param account the account to be saved under
+     * @param accountType the account to be saved under
+     * @param accountName 
+     * @return
      */
     private String modifyContact(String id, JSONObject contact, String accountType, String accountName) {
         // Get the RAW_CONTACT_ID which is needed to insert new values in an already existing contact.
@@ -1417,7 +1416,18 @@ public class ContactAccessorSdk5 extends ContactAccessor {
                     for (int i = 0; i < photos.length(); i++) {
                         JSONObject photo = (JSONObject) photos.get(i);
                         String photoId = getJsonString(photo, "id");
-                        byte[] bytes = getPhotoBytes(getJsonString(photo, "value"));
+                        
+                        //Check photo type
+                        byte[] bytes = null;
+                        String photoType = getJsonString(photo, "type");
+                        if(photoType.equals("url")){
+                        	bytes = getPhotoBytes(getJsonString(photo, "value"));
+                        } else if (photoType.equals("base64")) {
+                        	bytes = Base64.decode(getJsonString(photo, "value"), Base64.DEFAULT);
+                        } else {
+                        	bytes = getPhotoBytes(getJsonString(photo, "value"));
+                        }
+                        
                         // This is a new photo so do a DB insert
                         if (photoId == null) {
                             ContentValues contentValues = new ContentValues();
@@ -1579,7 +1589,18 @@ public class ContactAccessorSdk5 extends ContactAccessor {
      */
     private void insertPhoto(ArrayList<ContentProviderOperation> ops,
             JSONObject photo) {
-        byte[] bytes = getPhotoBytes(getJsonString(photo, "value"));
+    	
+    	//Check photo type
+        byte[] bytes = null;
+        String photoType = getJsonString(photo, "type");
+        if(photoType.equals("url")){
+        	bytes = getPhotoBytes(getJsonString(photo, "value"));
+        } else if (photoType.equals("base64")) {
+        	bytes = Base64.decode(getJsonString(photo, "value"), Base64.DEFAULT);
+        } else {
+        	bytes = getPhotoBytes(getJsonString(photo, "value"));
+        }
+    	
         ops.add(ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                 .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
                 .withValue(ContactsContract.Data.IS_SUPER_PRIMARY, 1)
@@ -1638,12 +1659,13 @@ public class ContactAccessorSdk5 extends ContactAccessor {
             return new FileInputStream(path);
         }
     }
-
+    
     /**
      * Creates a new contact and stores it in the database
-     *
      * @param contact the contact to be saved
-     * @param account the account to be saved under
+     * @param accountType the account to be saved under
+     * @param accountName
+     * @return
      */
     private String createNewContact(JSONObject contact, String accountType, String accountName) {
         // Create a list of attributes to add to the contact database
