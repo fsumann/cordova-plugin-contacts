@@ -29,13 +29,13 @@ Plugin documentation: [doc/index.md](doc/index.md)
 
 ###Contact Photos
 
-Get base64 encoded contact photos instead of urls by modifying the `option` object.
+Get base64 encoded contact photos instead of urls by modifying the `options` object.
 
     var options = new ContactFindOptions();  
     options.photoBase64 = true;
 
 
-You can also store contact photos with base64 encoded images.
+You can also store base64 encoded contact photos.
 
     var contact = navigator.contacts.create();
     
@@ -45,5 +45,5 @@ You can also store contact photos with base64 encoded images.
 	contact.save();
 
 	
-Supported platforms: android
+Supported platforms: Android
 
