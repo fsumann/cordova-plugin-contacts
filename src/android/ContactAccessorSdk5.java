@@ -1861,6 +1861,8 @@ public class ContactAccessorSdk5 extends ContactAccessor {
             Log.d(LOG_TAG, "Could not find contact with ID");
         }
 
+        cursor.close();
+
         return (result > 0) ? true : false;
     }
 
